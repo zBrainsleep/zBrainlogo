@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>zBrainlogo 자동 진단 페이지</title>
+  <style>
+    :root { --pad: 24px; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+           margin: 0; padding: var(--pad); background: #f8fafc; color: #0f172a; }
+    .card { max-width: 840px; margin: 0 auto; background: #fff; border-radius: 14px;
+            box-shadow: 0 10px 28px rgba(2,6,23,.06); padding: calc(var(--pad)*.9); }
+    h1 { margin: 0 0 10px; font-size: 24px; }
+    p { line-height: 1.6; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; }
+    .row { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+    .col { flex: 1 1 280px; }
+    img { max-width: 320px; height: auto; display: block; border-radius: 10px; }
+    .ok { background:#e8f5e9; color:#1b5e20; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:600; }
+    .warn { background:#fff3e0; color:#e65100; padding:6px 10px; border-radius:8px; display:inline-block; font-weight:600; }
+    ul { margin: 8px 0 0 20px; }
+    li { margin: 2px 0; }
+    footer { margin-top: 16px; color: #64748b; font-size: 13px; }
+    a { color: #0b57d0; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    details { margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>zBrainlogo 자동 진단</h1>
+    <p>아래 후보 경로들 중에서 실제로 존재하는 이미지를 자동으로 찾아 표시합니다.</p>
+    <div class="row">
+      <div class="col">
+        <div id="status" class="warn">확인 중…</div>
+        <p id="chosen"></p>
+        <img id="logo" alt="zBrain Logo 미리보기" />
+      </div>
+      <div class="col">
+        <strong>점검 순서</strong>
+        <ul>
+          <li>GitHub Pages의 서빙 폴더(<code>/(root)</code> 또는 <code>docs/</code>)와 이미지/이 파일의 위치가 일치해야 합니다.</li>
+          <li>파일명/대소문자를 정확히 맞추세요: <code>zBrain_logo_.png</code></li>
+          <li>배포 직후에는 1–2분 지연될 수 있습니다.</li>
+        </ul>
+        <details>
+          <summary>직접 열어보기 링크</summary>
+          <ul id="links"></ul>
+        </details>
+      </div>
+    </div>
+    <details>
+      <summary>JSON-LD(Organization) 예시</summary>
+      <p>아래는 자동으로 찾은 경로를 사용한 예시입니다. Squarespace Code Injection(Head)에 넣으세요.</p>
+      <pre><code id="jsonld">{"@context":"https://schema.org","@type":"Organization","name":"지브레인","url":"https://zbrainsleep.com","logo":"(경로 찾는 중…)"}</code></pre>
+    </details>
+    <footer>tip: 경로가 다르면 이미지가 보이지 않습니다. 이 페이지와 이미지가 같은 폴더인지도 확인하세요.</footer>
+  </div>
+
+  <script>
+    // 후보 경로들 (현재 문서 위치 기준 상대경로)
+    const candidates = [
+      "zBrain_logo_.png",
+      "./zBrain_logo_.png",
+      "ZBrain_logo_.png",
+      "zbrain_logo_.png",
+      "logo.png",
+      "./logo.png",
+      "docs/zBrain_logo_.png",
+      "../zBrain_logo_.png",
+      "../docs/zBrain_logo_.png"
+    ];
+
+    const status = document.getElementById('status');
+    const img = document.getElementById('logo');
+    const chosen = document.getElementById('chosen');
+    const links = document.getElementById('links');
+    const jsonld = document.getElementById('jsonld');
+
+    // 링크 목록 생성
+    candidates.forEach(p => {
+      const li = document.createElement('li');
+      const a = document.createElement('a');
+      a.href = p;
+      a.textContent = p;
+      a.target = "_blank";
+      li.appendChild(a);
+      links.appendChild(li);
+    });
+
+    // 순차적으로 fetch 시도
+    (async () => {
+      for (const p of candidates) {
+        try {
+          const res = await fetch(p, { cache: "no-store" });
+          if (res.ok && res.headers.get("Content-Type")?.includes("image")) {
+            // 성공
+            img.src = p + "?t=" + Date.now();
+            status.textContent = "이미지를 찾았습니다.";
+            status.className = "ok";
+            chosen.innerHTML = `선택된 경로: <code>${p}</code>`;
+            // JSON-LD 샘플 업데이트
+            jsonld.textContent = `{"@context":"https://schema.org","@type":"Organization","name":"지브레인","url":"https://zbrainsleep.com","logo":"${location.origin + location.pathname.replace(/index[^/]*$/, "") + p}"}`;
+            return;
+          }
+        } catch (e) {
+          // continue
+        }
+      }
+      status.textContent = "이미지를 찾을 수 없습니다. 파일 위치/이름/대소문자를 확인하세요.";
+      status.className = "warn";
+    })();
+  </script>
+</body>
+</html>
